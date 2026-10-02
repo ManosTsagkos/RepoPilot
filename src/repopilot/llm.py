@@ -53,6 +53,10 @@ class LLMClient:
         # A retry after a lost POST response could charge for the same analysis twice.
         try:
             response = await self.client.post("/v1/responses", json=payload)
+        except httpx.DecodingError as exc:
+            raise AppError(
+                "llm_invalid_response", "OpenAI returned unreadable response data. Try again."
+            ) from exc
         except httpx.TransportError as exc:
             raise AppError(
                 "llm_unavailable",
@@ -83,6 +87,13 @@ class LLMClient:
             for item in data.get("output", []):
                 if item.get("type") != "message":
                     continue
+                if item.get("role", "assistant") != "assistant":
+                    raise ValueError("Response output must be an assistant message")
+                if item.get("status", "completed") != "completed":
+                    raise AppError(
+                        "llm_incomplete",
+                        "The analysis was incomplete. Try again with another model.",
+                    )
                 for content in item.get("content", []):
                     if content.get("type") == "refusal":
                         raise AppError("llm_refusal", "The model declined to analyze this issue.")

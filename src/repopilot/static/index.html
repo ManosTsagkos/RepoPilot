@@ -54,6 +54,7 @@
             <button id="load-issues" class="primary-button" type="submit"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15 7a6 6 0 1 0 .5 5M15 3v4h-4"/></svg><span>Load issues</span></button>
           </form>
           <div class="source-notice"><span id="source-badge" class="source-badge">SAMPLE DATA</span><p id="source-notice">Demo uses fictional issues and pre-written analysis. Live mode reads GitHub and uses your configured LLM API.</p></div>
+          <div id="config-notice" class="config-notice" role="status" hidden><p id="config-notice-message"></p><button id="retry-config" class="text-button" type="button">Check again</button></div>
         </section>
 
         <div id="workspace-error" class="error-banner" role="alert" hidden><div><strong>Couldn’t load the workspace</strong><p id="workspace-error-message"></p></div><button id="retry-issues" class="secondary-button" type="button">Try again</button></div>
@@ -74,7 +75,7 @@
 
           <article class="detail-panel" aria-label="Selected issue">
             <div id="detail-empty" class="detail-empty"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 8h28v32H10zM17 18h14M17 25h14M17 32h8"/></svg><h2>A clearer path starts here.</h2><p>Select an issue to read the report and prepare an analysis.</p></div>
-            <div id="issue-detail" hidden>
+            <div id="issue-detail" aria-busy="false" hidden>
               <div class="detail-header"><div class="detail-overline"><span id="detail-number"></span><span class="issue-state-badge" id="detail-state"></span><a id="github-link" target="_blank" rel="noopener noreferrer" hidden>View on GitHub ↗</a></div><h2 id="detail-title"></h2><p class="detail-meta" id="detail-meta"></p><div id="original-labels" class="label-list"></div></div>
               <details class="original-report"><summary>Original issue <span>Read the report</span></summary><pre id="issue-body"></pre><p id="truncated-notice" class="filter-note" hidden>The issue body was truncated for analysis. Open GitHub to read the complete report.</p></details>
               <div class="analysis-toolbar"><div><span class="analysis-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m11 2-7 9h5l-1 7 8-10h-5l1-6Z"/></svg>Issue analysis</span><p id="analysis-provenance">Ready when you are.</p></div><button id="analyze-issue" class="primary-button" type="button"><span>Analyze issue</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button></div>

@@ -11,13 +11,13 @@ RepoPilot is a local FastAPI application. The backend serves the dashboard and J
 5. In live mode, the backend sends the selected issue to the OpenAI Responses API with a structured output schema. Demo mode returns a pre-written analysis.
 6. Pydantic validates the analysis. The browser displays it and provides copy and JSON export controls.
 
-The generated fields are `summary`, `category`, `priority`, `rationale`, `suggested_labels`, `missing_info`, `next_steps`, and `draft_reply`. Enum values and bounds keep the output predictable. Validation failures become API errors rather than partially trusted analyses.
+The generated fields are `summary`, `category`, `priority`, `rationale`, `suggested_labels`, `missing_info`, `next_steps`, and `draft_reply`. Enum values, bounds, and nonblank text checks keep the output predictable. Validation failures become API errors rather than partially trusted analyses. Analysis requests require a positive JSON integer for `issue_number`; strings, floats, and booleans are rejected.
 
 ## External services
 
-**GitHub.** Public repositories can be read anonymously. An optional `GITHUB_TOKEN` enables authenticated requests and access to private repositories covered by that token. The client uses timeouts and limited retries for network errors, server errors, and rate limits with a short retry delay. It does not blindly wait through long rate-limit windows.
+**GitHub.** Public repositories can be read anonymously. An optional `GITHUB_TOKEN` enables authenticated requests and access to private repositories covered by that token. The client validates normalized data and the selected issue's identity, and reports unreadable or malformed responses as errors. It uses timeouts and limited retries for network errors, server errors, and rate limits with a short retry delay. It does not blindly wait through long rate-limit windows.
 
-**OpenAI.** The client uses the Responses API and JSON Schema structured output. It treats a refusal, an incomplete response, or an invalid JSON result as an analysis failure. The backend does not automatically retry a paid analysis request: a retry could create a second charge after an ambiguous failure. A user can explicitly try again.
+**OpenAI.** The client uses the Responses API and JSON Schema structured output. It treats a refusal, incomplete output, an unexpected message role, or an invalid JSON result as an analysis failure. The backend does not automatically retry a paid analysis request: a retry could create a second charge after an ambiguous failure. A user can explicitly try again.
 
 Both clients use HTTPS with certificate verification through Python's default SSL context, including installed Windows certificate authorities. Certificate verification stays enabled.
 
@@ -25,7 +25,9 @@ Both clients use HTTPS with certificate verification through Python's default SS
 
 Analyses are cached in memory for 15 minutes by default, with a maximum of 128 entries. Cache identity includes the repository, normalized issue, a hash of its original full body, and model. Changes after the body truncation boundary therefore invalidate the prior result too. The cache is process-local and disappears on restart.
 
-Live analysis runs one request at a time. A second request that cannot acquire the analysis lock promptly receives an `analysis_busy` error and can be retried later.
+Uncached live analyses run one paid request at a time. A second uncached request that cannot acquire the analysis lock promptly receives an `analysis_busy` error and can be retried later. A valid cached result can be returned while another analysis runs. Expired entries are removed when the cache is checked, and `CACHE_TTL=0` disables storage.
+
+The browser keeps up to 100 results in memory for the current session. Live results expire after five minutes. Loading the repository again clears those results and resets the category and priority filters; the backend's separate 15-minute cache may still supply an unchanged analysis.
 
 ## Trust and privacy
 

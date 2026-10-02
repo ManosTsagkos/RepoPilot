@@ -114,7 +114,7 @@ The analysis includes `summary`, `category`, `priority`, `rationale`, `suggested
 
 ## Development
 
-If you use [uv](https://docs.astral.sh/uv/), `uv sync --locked --extra dev` installs the versions in `uv.lock`. Run the app with `uv run repopilot`.
+If you use [uv](https://docs.astral.sh/uv/), `uv sync --locked --extra dev` installs the versions in `uv.lock`. Run the app with `uv run --locked repopilot`. The pip setup above remains supported.
 
 ```sh
 python -m pytest
@@ -122,7 +122,17 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
-Tests use local fixtures and mocked HTTP responses, so they do not need credentials or make paid requests. GitHub Actions runs the same checks on Windows and Ubuntu with Python 3.11 and 3.13.
+For dashboard tests, install a current Node.js 24 release, then run:
+
+```sh
+npm ci
+npm run check
+npm test
+```
+
+Node is only needed for development checks; running the app needs no frontend build step. Tests use local fixtures and mocked HTTP responses, so they do not need credentials or make paid requests. Packaging tests build a source archive and wheel, install the wheel in a temporary location, and run the demo outside the checkout.
+
+GitHub Actions uses `uv.lock` for the Python checks on Windows and Ubuntu with Python 3.11 through 3.14, plus `package-lock.json` for the dashboard tests on Ubuntu. See [development checks](docs/development.md) for details.
 
 ## Scope and limitations
 

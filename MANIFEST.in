@@ -1,4 +1,12 @@
-include .env.example .gitignore .gitattributes LICENSE README.md pyproject.toml
-recursive-include docs *.md *.jpg
-recursive-include tests *.py
+include .gitignore .gitattributes LICENSE README.md pyproject.toml uv.lock
+include package.json package-lock.json
+recursive-include docs *.md *.jpg *.png
+recursive-include tests *.py *.js *.cjs
 recursive-include .github *.yml
+prune .git
+prune .venv
+prune node_modules
+prune build
+prune dist
+global-exclude __pycache__ *.py[cod] .env .env.*
+include .env.example

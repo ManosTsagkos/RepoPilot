@@ -43,11 +43,14 @@ def test_live_analysis_sends_strict_schema_and_separates_untrusted_issue_content
         if request.url.host == "api.github.com":
             assert request.method == "GET"
             assert request.url.path == "/repos/acme/taskboard/issues/7"
+            assert request.headers["authorization"] == "Bearer ghp-unit-test-only"
+            assert "sk-unit-test-only" not in str(request.headers)
             return httpx.Response(200, json=issue_payload(body=injection))
         assert request.url.host == "api.openai.com"
         assert request.method == "POST"
         assert request.url.path == "/v1/responses"
         assert request.headers["authorization"] == "Bearer sk-unit-test-only"
+        assert "ghp-unit-test-only" not in str(request.headers)
         payload = json.loads(request.content)
         assert payload["model"] == settings.openai_model
         assert payload["store"] is False
@@ -89,6 +92,13 @@ def test_live_analysis_sends_strict_schema_and_separates_untrusted_issue_content
         ("extra_field", "llm_invalid_response"),
         ("missing_text", "llm_invalid_response"),
         ("non_object", "llm_invalid_response"),
+        ("message_role", "llm_invalid_response"),
+        ("message_incomplete", "llm_incomplete"),
+        ("output_not_list", "llm_invalid_response"),
+        ("content_not_list", "llm_invalid_response"),
+        ("bad_block", "llm_invalid_response"),
+        ("blank_summary", "llm_invalid_response"),
+        ("blank_next_step", "llm_invalid_response"),
     ],
 )
 def test_invalid_model_results_are_rejected_and_never_cached(
@@ -116,6 +126,20 @@ def test_invalid_model_results_are_rejected_and_never_cached(
         response_data["output"] = []
     elif response_kind == "non_object":
         response_data = []
+    elif response_kind == "message_role":
+        response_data["output"][1]["role"] = "user"
+    elif response_kind == "message_incomplete":
+        response_data["output"][1]["status"] = "incomplete"
+    elif response_kind == "output_not_list":
+        response_data["output"] = {"unexpected": "object"}
+    elif response_kind == "content_not_list":
+        response_data["output"][1]["content"] = {"unexpected": "object"}
+    elif response_kind == "bad_block":
+        content[:] = [None]
+    elif response_kind == "blank_summary":
+        content[0]["text"] = json.dumps({**analysis_payload, "summary": " \n "})
+    elif response_kind == "blank_next_step":
+        content[0]["text"] = json.dumps({**analysis_payload, "next_steps": [" "]})
     llm_calls = []
 
     def respond(request: httpx.Request) -> httpx.Response:
@@ -133,6 +157,27 @@ def test_invalid_model_results_are_rejected_and_never_cached(
         assert response.status_code == 502
         assert response.json()["error"]["code"] == expected_code
     assert len(llm_calls) == 2
+
+
+def test_corrupt_openai_content_encoding_is_not_retried(
+    settings: Settings, issue_payload: Callable[..., dict[str, Any]]
+) -> None:
+    settings = settings.model_copy(update={"max_retries": 2})
+    llm_calls = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "api.github.com":
+            return httpx.Response(200, json=issue_payload())
+        assert request.url.host == "api.openai.com"
+        llm_calls.append(request)
+        return httpx.Response(200, headers={"content-encoding": "gzip"}, content=b"corrupt gzip")
+
+    with TestClient(create_app(settings, httpx.MockTransport(respond))) as client:
+        response = client.post("/api/analyze", json=ANALYZE_REQUEST)
+
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "llm_invalid_response"
+    assert len(llm_calls) == 1
 
 
 @pytest.mark.parametrize(

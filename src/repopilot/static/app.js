@@ -2,11 +2,14 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
+  const ANALYSIS_TTL = 5 * 60 * 1000;
+  const MAX_SAVED_ANALYSES = 100;
   const state = {
     mode: "demo",
     repository: "repopilot/taskboard",
     liveRepository: "",
     config: null,
+    configStatus: "loading",
     issues: [],
     selectedNumber: null,
     analyses: new Map(),
@@ -52,7 +55,36 @@
   }
 
   function selectedAnalysis() {
-    return state.analyses.get(analysisKey(state.selectedNumber));
+    return analysisForIssue(state.selectedNumber);
+  }
+
+  function analysisForIssue(number) {
+    const key = analysisKey(number);
+    const saved = state.analyses.get(key);
+    if (!saved) return undefined;
+    if (saved.expiresAt <= Date.now()) return undefined;
+    return saved.result;
+  }
+
+  function saveAnalysis(key, result) {
+    state.analyses.delete(key);
+    state.analyses.set(key, { result, expiresAt: result.mode === "demo" ? Infinity : Date.now() + ANALYSIS_TTL });
+    while (state.analyses.size > MAX_SAVED_ANALYSES) state.analyses.delete(state.analyses.keys().next().value);
+  }
+
+  function expireAnalyses() {
+    let changed = false;
+    for (const [key, saved] of state.analyses) {
+      if (saved.expiresAt <= Date.now()) {
+        state.analyses.delete(key);
+        changed = true;
+      }
+    }
+    if (changed) {
+      renderIssues();
+      renderDetails();
+      renderStats();
+    }
   }
 
   function formatDate(value) {
@@ -76,6 +108,9 @@
     } catch {
       throw new Error("The server returned an unexpected response. Try again or check the server logs.");
     }
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("The server returned an unexpected response. Try again or check the server logs.");
+    }
     if (!response.ok) {
       const retryAfter = data.error?.retry_after;
       const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? ` Try again in ${retryAfter} seconds.` : "";
@@ -85,23 +120,51 @@
   }
 
   async function loadConfig() {
+    state.configStatus = "loading";
+    $("retry-config").disabled = true;
+    renderConnectionNotice();
+    updateAnalyzeButton();
     try {
-      state.config = await request("/api/config");
+      const config = await request("/api/config");
+      if (typeof config.github_configured !== "boolean" || typeof config.llm_configured !== "boolean") {
+        throw new Error("Invalid connection settings.");
+      }
+      state.config = config;
+      state.configStatus = "ready";
       $("github-status").textContent = state.config.github_configured ? "Token ready" : "Public access";
       $("llm-status").textContent = state.config.llm_configured ? "Ready" : "Not configured";
       $("github-dot").classList.add("connected");
       $("llm-dot").classList.toggle("connected", state.config.llm_configured);
       $("model-name").textContent = state.config.llm_configured ? state.config.model : "Demo runs without API keys";
       $("app-version").textContent = `v${state.config.version}`;
-      if (state.config.demo_repository) {
-        if (state.mode === "demo") $("repository").value = state.config.demo_repository;
-      }
-      updateAnalyzeButton();
     } catch {
+      state.configStatus = "error";
+      state.config = null;
       $("github-status").textContent = "Unavailable";
       $("llm-status").textContent = "Unavailable";
       $("model-name").textContent = "Connection status unavailable";
+    } finally {
+      $("retry-config").disabled = false;
+      renderConnectionNotice();
+      renderDetails();
     }
+  }
+
+  function renderConnectionNotice() {
+    const live = state.mode === "live";
+    const unavailable = state.configStatus !== "ready" || !state.config?.llm_configured;
+    $("config-notice").hidden = state.configStatus !== "error" && !(live && unavailable);
+    $("retry-config").hidden = state.configStatus !== "error";
+    $("config-notice-message").textContent = state.configStatus === "error"
+      ? "Couldn’t check API configuration. Demo still works. Check again to enable live analysis."
+      : state.configStatus === "loading" ? "Checking API configuration…"
+      : "Live issue loading works without an LLM key. Set OPENAI_API_KEY in .env and restart to enable analysis.";
+  }
+
+  function resetFilters() {
+    $("issue-search").value = "";
+    $("category-filter").value = "all";
+    $("priority-filter").value = "all";
   }
 
   function setMode(mode) {
@@ -132,9 +195,9 @@
     $("inbox-source").textContent = mode === "demo" ? "DEMO" : "LIVE";
     $("inbox-footer-text").textContent = mode === "demo" ? "Sample repository · no GitHub changes" : "Read-only access · no GitHub changes";
     $("workspace-error").hidden = true;
-    $("issue-search").value = "";
-    $("category-filter").value = "all";
-    $("priority-filter").value = "all";
+    $("analysis-error").hidden = true;
+    resetFilters();
+    renderConnectionNotice();
     renderIssues();
     renderDetails();
     renderStats();
@@ -189,8 +252,10 @@
     state.repository = repository;
     state.issues = [];
     state.selectedNumber = null;
+    document.querySelector(".original-report").open = false;
     if (state.mode === "live") state.liveRepository = repository;
     $("workspace-error").hidden = true;
+    $("analysis-error").hidden = true;
     setIssuesLoading(true);
     renderIssues();
     renderDetails();
@@ -199,6 +264,7 @@
     try {
       const data = await request(`/api/issues?${query}`, { signal: controller.signal });
       if (controller.signal.aborted) return;
+      if (!Array.isArray(data.issues) || typeof data.repository !== "string") throw new Error("The server returned an invalid issue list. Try again.");
       state.issues = data.issues;
       state.repository = data.repository;
       $("repository").value = data.repository;
@@ -210,6 +276,7 @@
         }
       }
       $("source-notice").textContent = data.notice || $("source-notice").textContent;
+      resetFilters();
       state.selectedNumber = state.issues[0]?.number ?? null;
       setIssuesLoading(false);
       renderIssues();
@@ -235,7 +302,7 @@
     const priority = $("priority-filter").value;
     $("filter-note").hidden = category === "all" && priority === "all";
     return state.issues.filter((issue) => {
-      const analysis = state.analyses.get(analysisKey(issue.number))?.analysis;
+      const analysis = analysisForIssue(issue.number)?.analysis;
       if (category !== "all" && analysis?.category !== category) return false;
       if (priority !== "all" && analysis?.priority !== priority) return false;
       return !search || `${issue.number} ${issue.title} ${issue.body}`.toLowerCase().includes(search);
@@ -249,6 +316,7 @@
 
   function renderIssues() {
     const list = $("issue-list");
+    const focusedIssue = document.activeElement?.dataset.issueNumber;
     list.replaceChildren();
     const issues = filteredIssues();
     $("visible-count").textContent = issues.length;
@@ -267,10 +335,9 @@
         const clear = element("button", "text-button", "Reset filters");
         clear.type = "button";
         clear.addEventListener("click", () => {
-          $("issue-search").value = "";
-          $("category-filter").value = "all";
-          $("priority-filter").value = "all";
+          resetFilters();
           renderIssues();
+          $("issue-search").focus();
         });
         empty.append(element("br"), clear);
       }
@@ -282,12 +349,14 @@
       item.setAttribute("role", "listitem");
       const button = element("button", "issue-button");
       button.type = "button";
+      button.dataset.issueNumber = issue.number;
+      button.setAttribute("aria-controls", "issue-detail");
       button.classList.toggle("selected", issue.number === state.selectedNumber);
       button.setAttribute("aria-pressed", String(issue.number === state.selectedNumber));
       button.setAttribute("aria-label", `Issue ${issue.number}: ${issue.title}`);
       const top = element("span", "issue-row-top");
       top.append(element("span", "issue-number", `#${issue.number}`));
-      if (state.analyses.has(analysisKey(issue.number))) top.append(element("span", "analysis-indicator", "Analyzed"));
+      if (analysisForIssue(issue.number)) top.append(element("span", "analysis-indicator", "Analyzed"));
       const labels = element("span", "issue-card-labels");
       renderLabels(labels, (issue.labels || []).slice(0, 3));
       const bottom = element("span", "issue-row-bottom");
@@ -297,6 +366,7 @@
       item.append(button);
       list.append(item);
     }
+    if (focusedIssue) list.querySelector(`[data-issue-number="${focusedIssue}"]`)?.focus({ preventScroll: true });
   }
 
   function selectIssue(number) {
@@ -304,6 +374,7 @@
     analysisRequest?.abort();
     state.loadingAnalysis = false;
     state.selectedNumber = number;
+    document.querySelector(".original-report").open = false;
     $("analysis-error").hidden = true;
     renderIssues();
     renderDetails();
@@ -319,11 +390,12 @@
 
   function updateAnalyzeButton() {
     const issue = selectedIssue();
-    const unavailable = state.mode === "live" && state.config && !state.config.llm_configured;
+    const unavailable = state.mode === "live" && (state.configStatus !== "ready" || !state.config?.llm_configured);
     const button = $("analyze-issue");
     button.disabled = !issue || state.loadingAnalysis || unavailable;
+    button.setAttribute("aria-busy", String(state.loadingAnalysis));
     button.querySelector("span").textContent = state.loadingAnalysis ? "Analyzing…" : selectedAnalysis() ? "Analyze again" : "Analyze issue";
-    button.title = unavailable ? "Set OPENAI_API_KEY and restart RepoPilot to enable live analysis." : "";
+    button.title = unavailable ? state.configStatus === "ready" ? "Set OPENAI_API_KEY and restart RepoPilot to enable live analysis." : "Check API configuration to enable live analysis." : "";
     $("retry-analysis").disabled = state.loadingAnalysis || unavailable;
   }
 
@@ -331,7 +403,7 @@
     const issue = selectedIssue();
     $("detail-empty").hidden = Boolean(issue);
     $("issue-detail").hidden = !issue;
-    $("analysis-error").hidden = true;
+    $("issue-detail").setAttribute("aria-busy", String(state.loadingAnalysis));
     updateAnalyzeButton();
     if (!issue) return;
     $("detail-number").textContent = `ISSUE #${issue.number}`;
@@ -342,7 +414,6 @@
     renderLabels($("original-labels"), issue.labels);
     $("issue-body").textContent = issue.body || "No issue description provided.";
     $("truncated-notice").hidden = !issue.body_truncated;
-    document.querySelector(".original-report").open = false;
     const url = state.mode === "live" ? safeGitHubUrl(issue.html_url) : null;
     $("github-link").hidden = !url;
     if (url) $("github-link").href = url;
@@ -351,10 +422,10 @@
     $("analysis-result").hidden = !result || state.loadingAnalysis;
     $("analysis-loading").hidden = !state.loadingAnalysis;
     $("analysis-placeholder").hidden = Boolean(result) || state.loadingAnalysis;
-    const unavailable = state.mode === "live" && state.config && !state.config.llm_configured;
+    const unavailable = state.mode === "live" && (state.configStatus !== "ready" || !state.config?.llm_configured);
     $("analysis-provenance").textContent = state.loadingAnalysis
       ? (state.mode === "demo" ? "Loading the pre-written sample analysis." : "Sending this issue to your LLM provider.")
-      : result ? provenance(result) : unavailable ? "Set OPENAI_API_KEY and restart to enable live analysis." : state.mode === "demo" ? "Pre-written sample analysis · no LLM request" : "Ready when you are. Analysis sends this issue to the LLM provider.";
+      : result ? provenance(result) : unavailable ? state.configStatus === "ready" ? "Set OPENAI_API_KEY and restart to enable live analysis." : "Check API configuration to enable live analysis." : state.mode === "demo" ? "Pre-written sample analysis · no LLM request" : "Ready when you are. Analysis sends this issue to the LLM provider.";
     if (result) renderAnalysis(result);
   }
 
@@ -391,10 +462,13 @@
   async function analyzeIssue() {
     const issue = selectedIssue();
     if (!issue || state.loadingAnalysis) return;
+    if (state.mode === "live" && (state.configStatus !== "ready" || !state.config?.llm_configured)) return;
     analysisRequest?.abort();
     const controller = new AbortController();
     analysisRequest = controller;
     const key = analysisKey(issue.number);
+    const repository = state.repository;
+    const mode = state.mode;
     state.loadingAnalysis = true;
     $("analysis-error").hidden = true;
     $("analysis-loading-text").textContent = state.mode === "demo" ? "Loading the pre-written sample analysis…" : "Reading the issue and preparing suggestions…";
@@ -404,12 +478,15 @@
       const result = await request("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repository: state.repository, issue_number: issue.number, mode: state.mode }),
+        body: JSON.stringify({ repository, issue_number: issue.number, mode }),
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
+      if (result.issue?.number !== issue.number || result.repository?.toLowerCase() !== repository.toLowerCase() || result.mode !== mode || !result.analysis) {
+        throw new Error("The analysis response did not match this issue. Try again.");
+      }
       state.issues = state.issues.map((item) => item.number === result.issue.number ? result.issue : item);
-      state.analyses.set(key, result);
+      saveAnalysis(key, result);
       state.loadingAnalysis = false;
       renderDetails();
       renderIssues();
@@ -431,7 +508,7 @@
   }
 
   function renderStats() {
-    const results = state.issues.map((issue) => state.analyses.get(analysisKey(issue.number))).filter(Boolean);
+    const results = state.issues.map((issue) => analysisForIssue(issue.number)).filter(Boolean);
     $("issue-count").textContent = state.issues.length;
     $("analysis-count").textContent = results.length;
     $("priority-count").textContent = results.filter((result) => result.analysis.priority === "high").length;
@@ -440,28 +517,43 @@
 
   async function copyReply() {
     const reply = selectedAnalysis()?.analysis.draft_reply;
-    if (!reply) return;
+    if (!reply) { expireAnalyses(); renderDetails(); return; }
+    const key = analysisKey(state.selectedNumber);
+    const number = state.selectedNumber;
+    let clipboardTimeout;
     try {
-      await navigator.clipboard.writeText(reply);
-      toast("Reply draft copied. Review it before posting.");
+      await Promise.race([
+        navigator.clipboard.writeText(reply),
+        new Promise((resolve, reject) => {
+          clipboardTimeout = setTimeout(() => reject(new Error("Clipboard timed out.")), 2000);
+        }),
+      ]);
+      toast(`Reply for #${number} copied. Review it before posting.`);
     } catch {
+      if (key !== analysisKey(state.selectedNumber) || selectedAnalysis()?.analysis.draft_reply !== reply) {
+        toast("The selected issue changed. Copy the current draft again.");
+        return;
+      }
       const selection = window.getSelection();
+      if (!selection) { toast("Select the reply text and copy it manually."); return; }
       const range = document.createRange();
       range.selectNodeContents($("draft-reply"));
       selection.removeAllRanges();
       selection.addRange(range);
       toast("Draft selected. Press Ctrl+C or ⌘C to copy.");
+    } finally {
+      clearTimeout(clipboardTimeout);
     }
   }
 
   function downloadJson() {
     const result = selectedAnalysis();
-    if (!result) return;
+    if (!result) { expireAnalyses(); renderDetails(); return; }
     const blob = new Blob([JSON.stringify(result, null, 2) + "\n"], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = element("a");
     link.href = url;
-    link.download = `repopilot-${state.repository.replace(/[^a-zA-Z0-9_-]/g, "-")}-issue-${state.selectedNumber}.json`;
+    link.download = `repopilot-${result.repository.replace(/[^a-zA-Z0-9_-]/g, "-")}-issue-${result.issue.number}.json`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -473,6 +565,7 @@
   $("live-mode").addEventListener("click", () => setMode("live"));
   $("repository-form").addEventListener("submit", (event) => { event.preventDefault(); loadIssues(); });
   $("retry-issues").addEventListener("click", loadIssues);
+  $("retry-config").addEventListener("click", loadConfig);
   $("analyze-issue").addEventListener("click", analyzeIssue);
   $("retry-analysis").addEventListener("click", analyzeIssue);
   $("issue-search").addEventListener("input", renderIssues);
@@ -480,6 +573,8 @@
   $("priority-filter").addEventListener("change", renderIssues);
   $("copy-reply").addEventListener("click", copyReply);
   $("download-json").addEventListener("click", downloadJson);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) expireAnalyses(); });
+  setInterval(expireAnalyses, 60 * 1000);
 
   Promise.allSettled([loadConfig(), loadIssues()]);
 })();

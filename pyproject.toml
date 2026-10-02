@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "ruff>=0.9,<1", "build>=1,<2"]
+dev = ["pytest>=8,<10", "ruff>=0.9,<1", "build>=1,<2", "setuptools>=75", "httpx2>=2,<3"]
 
 [project.scripts]
 repopilot = "repopilot.__main__:main"

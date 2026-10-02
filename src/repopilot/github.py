@@ -40,7 +40,11 @@ def parse_repository(value: str) -> str:
 
 def normalize_issue(data: dict, repository: str) -> Issue:
     try:
-        body = data.get("body") or ""
+        body = data.get("body")
+        if body is None:
+            body = ""
+        if not isinstance(body, str):
+            raise TypeError("Issue body must be a string or null")
         number = data["number"]
         return Issue(
             number=number,
@@ -56,17 +60,28 @@ def normalize_issue(data: dict, repository: str) -> Issue:
             body_truncated=len(body) > BODY_LIMIT,
             content_hash=hashlib.sha256(body.encode()).hexdigest(),
         )
-    except (KeyError, TypeError, AttributeError, ValidationError) as exc:
+    except (KeyError, TypeError, AttributeError, UnicodeError, ValidationError) as exc:
         raise AppError("github_invalid_response", "GitHub returned unexpected issue data.") from exc
 
 
 def retry_after(response: httpx.Response) -> int | None:
-    seconds = response.headers.get("retry-after")
-    if seconds and seconds.isdigit():
-        return int(seconds)
-    reset = response.headers.get("x-ratelimit-reset")
-    if reset and reset.isdigit() and response.headers.get("x-ratelimit-remaining") == "0":
-        return max(1, int(reset) - int(time.time()))
+    def integer_header(name: str) -> int | None:
+        value = response.headers.get(name, "").strip()
+        # HTTP delay/reset values use ASCII decimal digits. isdigit() also accepts
+        # characters such as superscript two, which int() cannot parse.
+        if value and len(value) <= 20 and value.isascii() and value.isdecimal():
+            try:
+                return int(value)
+            except ValueError:
+                pass
+        return None
+
+    seconds = integer_header("retry-after")
+    if seconds is not None:
+        return seconds
+    reset = integer_header("x-ratelimit-reset")
+    if reset is not None and response.headers.get("x-ratelimit-remaining") == "0":
+        return max(1, reset - int(time.time()))
     return None
 
 
@@ -79,6 +94,10 @@ class GitHubClient:
         for attempt in range(self.settings.max_retries + 1):
             try:
                 response = await self.client.get(path, params=params)
+            except httpx.DecodingError as exc:
+                raise AppError(
+                    "github_invalid_response", "GitHub returned unreadable response data."
+                ) from exc
             except httpx.TransportError as exc:
                 if attempt < self.settings.max_retries:
                     await asyncio.sleep(0.25 * 2**attempt)
@@ -168,4 +187,9 @@ class GitHubClient:
             raise AppError("github_invalid_response", "GitHub returned unexpected issue data.")
         if "pull_request" in data:
             raise AppError("not_an_issue", "Choose an issue rather than a pull request.", 422)
-        return normalize_issue(data, repository)
+        issue = normalize_issue(data, repository)
+        if issue.number != number:
+            raise AppError(
+                "github_invalid_response", "GitHub returned a different issue than requested."
+            )
+        return issue

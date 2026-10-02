@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     max_retries: int = Field(default=2, ge=0, le=3)
     cache_ttl: int = Field(default=900, ge=0, le=3600)
 
+    @field_validator("openai_model", mode="before")
+    @classmethod
+    def trim_model(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
     @field_validator("openai_api_key", "github_token", mode="before")
     @classmethod
     def empty_key(cls, value: object) -> object:

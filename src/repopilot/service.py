@@ -30,6 +30,17 @@ class IssueService:
         self.cache: OrderedDict[str, tuple[float, AnalysisResult]] = OrderedDict()
         self.analysis_lock = asyncio.Lock()
 
+    def _get_cached(self, key: str) -> AnalysisResult | None:
+        now = time.monotonic()
+        for expired_key, (expires_at, _) in list(self.cache.items()):
+            if expires_at <= now:
+                del self.cache[expired_key]
+        cached = self.cache.get(key)
+        if cached:
+            self.cache.move_to_end(key)
+            return cached[1].model_copy(update={"cached": True})
+        return None
+
     async def list_issues(
         self,
         repository: str,
@@ -89,6 +100,9 @@ class IssueService:
             sort_keys=True,
         )
         key = hashlib.sha256(signature.encode()).hexdigest()
+        cached = self._get_cached(key)
+        if cached:
+            return cached
         try:
             await asyncio.wait_for(self.analysis_lock.acquire(), timeout=1)
         except TimeoutError as exc:
@@ -99,10 +113,10 @@ class IssueService:
                 2,
             ) from exc
         try:
-            cached = self.cache.get(key)
-            if cached and cached[0] > time.monotonic():
-                self.cache.move_to_end(key)
-                return cached[1].model_copy(update={"cached": True})
+            # A request for the same issue may have completed while we waited.
+            cached = self._get_cached(key)
+            if cached:
+                return cached
             analysis = await self.llm.analyze(repository, issue)
             result = AnalysisResult(
                 repository=repository,
@@ -112,10 +126,11 @@ class IssueService:
                 provider="openai",
                 model=self.settings.openai_model,
             )
-            self.cache[key] = (time.monotonic() + self.settings.cache_ttl, result)
-            self.cache.move_to_end(key)
-            while len(self.cache) > 128:
-                self.cache.popitem(last=False)
+            if self.settings.cache_ttl:
+                self.cache[key] = (time.monotonic() + self.settings.cache_ttl, result)
+                self.cache.move_to_end(key)
+                while len(self.cache) > 128:
+                    self.cache.popitem(last=False)
             return result
         finally:
             self.analysis_lock.release()

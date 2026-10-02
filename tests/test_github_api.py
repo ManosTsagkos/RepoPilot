@@ -1,3 +1,4 @@
+import json
 from collections.abc import Callable
 from typing import Any
 
@@ -181,3 +182,129 @@ def test_analysis_rejects_pull_requests_before_calling_the_llm(
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "not_an_issue"
     assert len(requests) == 1
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"body": False},
+        {"body": 0},
+        {"body": []},
+        {"body": {}},
+        {"number": True},
+        {"number": "7"},
+        {"number": 7.0},
+        {"comments": False},
+        {"body": "\ud800"},
+        {"title": "\ud800"},
+        {"labels": [{"name": "\ud800"}]},
+        {"user": {"login": "\ud800"}},
+    ],
+)
+def test_malformed_issue_fields_are_rejected_before_rendering_or_analysis(
+    settings: Settings,
+    issue_payload: Callable[..., dict[str, Any]],
+    changes: dict[str, Any],
+) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.github.com"
+        # Escape Unicode to exercise invalid strings received inside valid JSON.
+        issue = issue_payload()
+        issue.update(changes)
+        return httpx.Response(200, content=json.dumps([issue]).encode("utf-8"))
+
+    with TestClient(create_app(settings, httpx.MockTransport(respond))) as client:
+        response = client.get("/api/issues", params={"repository": REPOSITORY, "mode": "live"})
+
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "github_invalid_response"
+
+
+def test_null_body_and_user_are_normalized_without_trusting_external_links(
+    settings: Settings, issue_payload: Callable[..., dict[str, Any]]
+) -> None:
+    issue = issue_payload(body=None, user=None, html_url="https://unrelated.example/unsafe")
+    with TestClient(
+        create_app(settings, httpx.MockTransport(lambda _: httpx.Response(200, json=[issue])))
+    ) as client:
+        response = client.get("/api/issues", params={"repository": REPOSITORY, "mode": "live"})
+
+    assert response.status_code == 200
+    returned = response.json()["issues"][0]
+    assert returned["body"] == ""
+    assert returned["author"] == "unknown"
+    assert returned["html_url"] == "https://github.com/acme/taskboard/issues/7"
+
+
+def test_wrong_issue_number_is_rejected_before_a_paid_analysis(
+    settings: Settings, issue_payload: Callable[..., dict[str, Any]]
+) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.github.com"
+        return httpx.Response(200, json=issue_payload(8))
+
+    with TestClient(create_app(settings, httpx.MockTransport(respond))) as client:
+        response = client.post(
+            "/api/analyze",
+            json={"repository": REPOSITORY, "issue_number": 7, "mode": "live"},
+        )
+
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "github_invalid_response"
+
+
+@pytest.mark.parametrize(
+    ("header_name", "header_value"),
+    [
+        (b"retry-after", b"\xb2"),
+        (b"x-ratelimit-reset", b"\xb2"),
+        (b"retry-after", b"9" * 5000),
+        (b"x-ratelimit-reset", b"9" * 5000),
+    ],
+)
+def test_malformed_rate_limit_headers_do_not_crash_the_error_response(
+    settings: Settings, header_name: bytes, header_value: bytes
+) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            403, headers=[(b"x-ratelimit-remaining", b"0"), (header_name, header_value)]
+        )
+
+    with TestClient(create_app(settings, httpx.MockTransport(respond))) as client:
+        response = client.get("/api/issues", params={"repository": REPOSITORY, "mode": "live"})
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "github_rate_limit"
+    assert response.json()["error"]["retry_after"] is None
+
+
+def test_corrupt_github_content_encoding_returns_a_controlled_error(settings: Settings) -> None:
+    calls = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, headers={"content-encoding": "gzip"}, content=b"corrupt gzip")
+
+    with TestClient(create_app(settings, httpx.MockTransport(respond))) as client:
+        response = client.get("/api/issues", params={"repository": REPOSITORY, "mode": "live"})
+
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "github_invalid_response"
+    assert len(calls) == 1
+
+
+def test_public_repository_loading_uses_no_authorization_without_a_github_token(
+    settings: Settings, issue_payload: Callable[..., dict[str, Any]]
+) -> None:
+    settings = settings.model_copy(update={"github_token": None})
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.github.com"
+        assert "authorization" not in request.headers
+        assert "sk-unit-test-only" not in str(request.headers)
+        return httpx.Response(200, json=[issue_payload()])
+
+    with TestClient(create_app(settings, httpx.MockTransport(respond))) as client:
+        response = client.get("/api/issues", params={"repository": REPOSITORY, "mode": "live"})
+
+    assert response.status_code == 200

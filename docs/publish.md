@@ -8,7 +8,12 @@ Run these commands from the RepoPilot directory. They assume that you have Git i
 python -m pytest
 python -m ruff check .
 python -m ruff format --check .
+npm ci
+npm run check
+npm test
 ```
+
+The npm commands need a current Node.js 24 release. They run dashboard development checks and do not create a frontend build. For a reproducible Python environment, use `uv sync --locked --extra dev` before the checks and prefix Python commands with `uv run --locked --extra dev`.
 
 If this is a fresh directory, initialize it:
 

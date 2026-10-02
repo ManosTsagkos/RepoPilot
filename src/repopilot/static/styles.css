@@ -17,7 +17,8 @@ button, a, input, select, summary { -webkit-tap-highlight-color: transparent; }
 button, a, input, select, summary:focus-visible { outline-offset: 4px; }
 :focus-visible { outline: 3px solid #8da8ed; }
 button { cursor: pointer; }
-button:disabled { cursor: wait; opacity: .65; }
+button:disabled { cursor: not-allowed; opacity: .65; }
+button[aria-busy="true"] { cursor: wait; }
 a { color: inherit; }
 button svg, .read-only-badge svg, .analysis-label svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 [hidden] { display: none !important; }
@@ -84,6 +85,9 @@ select { border: 1px solid #dde2e3; background: #fafbfa; color: #52646e; border-
 .source-badge { display: inline-block; color: #917147; background: #f5f0e6; font-size: 8px; padding: 3px 6px; border-radius: 3px; letter-spacing: .6px; font-weight: 650; flex-shrink: 0; }
 .source-badge.live { color: #287765; background: #e7f2ed; }
 .source-notice p { font-size: 10px; margin: 0; color: #8a8e88; }
+.config-notice { display: flex; align-items: center; justify-content: space-between; gap: 15px; border-top: 1px solid #eee9df; padding-block: 12px; }
+.config-notice p { color: #847456; font-size: 10px; margin: 0; }
+.config-notice button { flex-shrink: 0; color: #706a58; }
 .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; margin-block: 21px 26px; }
 .stat-card { display: flex; justify-content: space-between; align-items: center; padding: 19px 22px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
 .stat-label { display: block; color: #829099; font-size: 8px; letter-spacing: 1px; font-weight: 650; }
@@ -182,6 +186,7 @@ select { border: 1px solid #dde2e3; background: #fafbfa; color: #52646e; border-
 .step-list li { counter-increment: steps; }
 .step-list li::before { content: counter(steps); font-size: 8px; color: #83a091; background: #f0f5f1; width: 15px; height: 15px; text-align: center; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
 .action-grid .empty-list { font-size: 10px; color: #91a098; line-height: 1.8; margin: 0; }
+.action-grid .empty-list::before { display: none; }
 .reply-section { background: #f9faf7; border: 1px solid #e8ede5; border-radius: 7px; padding: 15px 17px 13px; }
 .reply-section h3 { font-size: 10px; }
 .text-button { display: inline-flex; align-items: center; gap: 5px; padding: 3px 0; border: 0; background: transparent; color: #82958c; font-size: 9px; }
@@ -276,6 +281,8 @@ select { border: 1px solid #dde2e3; background: #fafbfa; color: #52646e; border-
   .stat-icon { width: 32px; height: 32px; }
 }
 @media (max-width: 680px) {
+  .mode-switch button { min-height: 36px; }
+  .text-button { min-height: 36px; }
   .workspace-grid { grid-template-columns: 1fr; }
   .issue-list { max-height: 305px; }
   .issue-button { padding: 14px 18px; }
@@ -283,7 +290,7 @@ select { border: 1px solid #dde2e3; background: #fafbfa; color: #52646e; border-
   .issue-title { font-size: 12px; }
   .issue-card-labels { margin-top: 7px; }
   .inbox-filters { padding-inline: 18px; }
-  .filter-row select { height: 34px; font-size: 10px; }
+  .filter-row select { height: 38px; font-size: 10px; }
   .search-field input { font-size: 11px; }
   .detail-header h2 { font-size: 21px; }
   .detail-overline a { margin-left: auto; width: auto; }

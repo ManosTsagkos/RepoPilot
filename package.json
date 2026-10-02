@@ -1,0 +1,16 @@
+{
+  "name": "repopilot-frontend-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Development checks for the RepoPilot dashboard. No frontend build step is needed.",
+  "scripts": {
+    "check": "node --check src/repopilot/static/app.js",
+    "test": "node --test tests/frontend/*.test.cjs"
+  },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.1"
+  }
+}
