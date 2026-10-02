@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#142a39">
+    <meta name="description" content="RepoPilot turns GitHub issues into clear summaries, triage suggestions, and reply drafts.">
+    <title>RepoPilot · Issue workspace</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to workspace</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <a class="brand" href="/" aria-label="RepoPilot home">
+          <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="12" fill="#a8e5d0"/><path d="m11 24 9-14 9 14-9-4-9 4Z" fill="#173542"/><path d="M20 20v10" stroke="#173542" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>RepoPilot<span class="brand-subtitle">ISSUE ASSISTANT</span></span>
+        </a>
+        <span class="sidebar-label">WORKSPACE</span>
+        <nav>
+          <a class="nav-item active" href="#main" aria-current="page"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="12" y="3" width="5" height="5" rx="1"/><rect x="3" y="12" width="5" height="5" rx="1"/><rect x="12" y="12" width="5" height="5" rx="1"/></svg>Issue workspace<span class="nav-dot"></span></a>
+          <a class="nav-item" href="/docs" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5-5 5 5 5m6-10 5 5-5 5m-2-12-2 14"/></svg>API reference<svg class="nav-external" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 14 14 6M6 6h8v8"/></svg></a>
+        </nav>
+        <div class="sidebar-note">
+          <span class="note-icon" aria-hidden="true">↗</span>
+          <h2>A little less triage.<br>A little more building.</h2>
+          <p>Turn an issue into a clear plan, then decide what happens next.</p>
+        </div>
+        <div class="connection-panel">
+          <span class="sidebar-label">CONNECTIONS</span>
+          <div class="connection-row"><span class="connection-dot" id="github-dot"></span><span>GitHub</span><span id="github-status">Checking</span></div>
+          <div class="connection-row"><span class="connection-dot" id="llm-dot"></span><span>LLM API</span><span id="llm-status">Checking</span></div>
+          <p id="model-name">Python · REST · LLMs</p>
+        </div>
+        <div class="sidebar-footer"><span class="avatar">MT</span><div>Manos Tsagkos<span>Personal project</span></div><span id="app-version">v0.1.0</span></div>
+      </aside>
+
+      <main id="main" class="main-content">
+        <header class="page-header">
+          <div><p class="eyebrow">WORKSPACE <span>/</span> ISSUE TRIAGE</p><h1>Your next issue,<br class="mobile-break"> understood.</h1><p class="page-description">Less time sorting reports. More time moving things forward.</p></div>
+          <span class="read-only-badge"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>Suggestions only</span>
+        </header>
+
+        <section class="repository-panel" aria-label="Repository settings">
+          <div class="repository-panel-top">
+            <div><h2>Connect a repository</h2><p id="mode-description">Explore sample issues and pre-written analyses. No API keys needed.</p></div>
+            <div class="mode-switch" role="group" aria-label="Data source"><button id="demo-mode" type="button" class="selected" aria-pressed="true">Demo</button><button id="live-mode" type="button" aria-pressed="false">Live GitHub</button></div>
+          </div>
+          <form id="repository-form" class="repository-form">
+            <div class="repository-field"><label for="repository">GitHub repository</label><div class="input-with-icon"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h11v14H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm-2 11h13M6 3v5l2-1 2 1V3"/></svg><input id="repository" name="repository" value="repopilot/taskboard" placeholder="owner/repository" autocomplete="off" spellcheck="false" required aria-describedby="repository-hint" readonly></div><span class="sr-only" id="repository-hint">Enter a GitHub repository in owner slash repository format. Demo uses sample data.</span></div>
+            <div class="state-field"><label for="issue-state">Issue state</label><select id="issue-state" name="state"><option value="open">Open issues</option><option value="closed">Closed issues</option><option value="all">All issues</option></select></div>
+            <button id="load-issues" class="primary-button" type="submit"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15 7a6 6 0 1 0 .5 5M15 3v4h-4"/></svg><span>Load issues</span></button>
+          </form>
+          <div class="source-notice"><span id="source-badge" class="source-badge">SAMPLE DATA</span><p id="source-notice">Demo uses fictional issues and pre-written analysis. Live mode reads GitHub and uses your configured LLM API.</p></div>
+        </section>
+
+        <div id="workspace-error" class="error-banner" role="alert" hidden><div><strong>Couldn’t load the workspace</strong><p id="workspace-error-message"></p></div><button id="retry-issues" class="secondary-button" type="button">Try again</button></div>
+
+        <section class="stats-grid" aria-label="Workspace overview">
+          <div class="stat-card"><div><span class="stat-label">ISSUES LOADED</span><strong id="issue-count">0</strong><span id="issue-count-description">Waiting for repository</span></div><span class="stat-icon blue"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v6m0 4h.01"/></svg></span></div>
+          <div class="stat-card"><div><span class="stat-label">ANALYSIS READY</span><strong id="analysis-count">0</strong><span>Summaries in this session</span></div><span class="stat-icon teal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 3-9 11h7l-1 7 10-12h-7l1-6Z"/></svg></span></div>
+          <div class="stat-card"><div><span class="stat-label">HIGH PRIORITY</span><strong id="priority-count">0</strong><span>Among analyzed issues</span></div><span class="stat-icon amber"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4m0 0h13l-3 5 3 5H5"/></svg></span></div>
+        </section>
+
+        <section class="workspace-grid" aria-label="Issue triage">
+          <div class="inbox-panel">
+            <div class="panel-heading"><h2>Issue inbox <span id="visible-count" class="count-badge">0</span></h2><span class="tiny-label" id="inbox-source">DEMO</span></div>
+            <div class="inbox-filters"><label class="search-field"><span class="sr-only">Search issues</span><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input id="issue-search" placeholder="Search title, body, or #number" type="search" autocomplete="off"></label><div class="filter-row"><label><span class="sr-only">Filter analyzed issues by category</span><select id="category-filter" aria-label="Filter analyzed issues by category"><option value="all">All categories</option><option value="bug">Bug</option><option value="feature">Feature</option><option value="question">Question</option><option value="documentation">Documentation</option><option value="maintenance">Maintenance</option></select></label><label><span class="sr-only">Filter analyzed issues by priority</span><select id="priority-filter" aria-label="Filter analyzed issues by priority"><option value="all">All priorities</option><option value="high">High priority</option><option value="medium">Medium priority</option><option value="low">Low priority</option></select></label></div><p id="filter-note" class="filter-note" hidden>Category and priority filters show analyzed issues.</p></div>
+            <div id="issue-list" class="issue-list" role="list" aria-label="Issues" aria-busy="false"></div>
+            <div class="inbox-footer"><span class="small-dot"></span><span id="inbox-footer-text">Sample repository · no GitHub changes</span></div>
+          </div>
+
+          <article class="detail-panel" aria-label="Selected issue">
+            <div id="detail-empty" class="detail-empty"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 8h28v32H10zM17 18h14M17 25h14M17 32h8"/></svg><h2>A clearer path starts here.</h2><p>Select an issue to read the report and prepare an analysis.</p></div>
+            <div id="issue-detail" hidden>
+              <div class="detail-header"><div class="detail-overline"><span id="detail-number"></span><span class="issue-state-badge" id="detail-state"></span><a id="github-link" target="_blank" rel="noopener noreferrer" hidden>View on GitHub ↗</a></div><h2 id="detail-title"></h2><p class="detail-meta" id="detail-meta"></p><div id="original-labels" class="label-list"></div></div>
+              <details class="original-report"><summary>Original issue <span>Read the report</span></summary><pre id="issue-body"></pre><p id="truncated-notice" class="filter-note" hidden>The issue body was truncated for analysis. Open GitHub to read the complete report.</p></details>
+              <div class="analysis-toolbar"><div><span class="analysis-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m11 2-7 9h5l-1 7 8-10h-5l1-6Z"/></svg>Issue analysis</span><p id="analysis-provenance">Ready when you are.</p></div><button id="analyze-issue" class="primary-button" type="button"><span>Analyze issue</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button></div>
+              <div id="analysis-error" class="error-banner analysis-error" role="alert" hidden><div><strong>Analysis unavailable</strong><p id="analysis-error-message"></p></div><button id="retry-analysis" class="secondary-button" type="button">Try again</button></div>
+              <div id="analysis-placeholder" class="analysis-placeholder"><span class="placeholder-icon" aria-hidden="true">✦</span><h3>Make the next step obvious.</h3><p>Get a summary, triage suggestions, missing context, and a reply draft.</p></div>
+              <div id="analysis-loading" class="analysis-loading" role="status" hidden><span class="spinner" aria-hidden="true"></span><p id="analysis-loading-text">Reading the issue and preparing suggestions…</p></div>
+              <div id="analysis-result" class="analysis-result" hidden>
+                <section class="summary-section"><div class="section-heading"><h3>At a glance</h3><div class="triage-pills"><span id="category-pill" class="category-pill"></span><span id="priority-pill" class="priority-pill"></span></div></div><p id="analysis-summary" class="summary-text"></p><p class="rationale"><strong>Why this priority</strong><span id="analysis-rationale"></span></p><div class="suggested-labels"><span>Suggested labels</span><div id="suggested-labels" class="label-list"></div></div></section>
+                <div class="action-grid"><section><h3><span class="section-icon amber-text" aria-hidden="true">?</span>Missing context</h3><ul id="missing-info" class="context-list"></ul></section><section><h3><span class="section-icon teal-text" aria-hidden="true">↗</span>Next steps</h3><ol id="next-steps" class="step-list"></ol></section></div>
+                <section class="reply-section"><div class="section-heading"><h3>Suggested reply</h3><button id="copy-reply" class="text-button" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 7V3H3v9h4"/></svg><span>Copy draft</span></button></div><pre id="draft-reply"></pre><p>Review and edit before posting to GitHub.</p></section>
+                <div class="analysis-footer"><span id="result-source"></span><button id="download-json" class="text-button" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v11m-4-4 4 4 4-4M3 14v3h14v-3"/></svg>Export JSON</button></div>
+              </div>
+            </div>
+          </article>
+        </section>
+        <footer class="page-footer"><span>Built for a thoughtful first pass.</span><span>RepoPilot · AI-assisted issue triage</span></footer>
+        <p id="status-message" class="sr-only" role="status" aria-live="polite"></p>
+      </main>
+    </div>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

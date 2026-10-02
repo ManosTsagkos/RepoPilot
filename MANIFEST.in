@@ -1,0 +1,4 @@
+include .env.example .gitignore .gitattributes LICENSE README.md pyproject.toml
+recursive-include docs *.md *.jpg
+recursive-include tests *.py
+recursive-include .github *.yml
