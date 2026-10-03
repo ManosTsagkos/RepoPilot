@@ -1,0 +1,268 @@
+{
+  "config": {
+    "github_configured": false,
+    "llm_configured": false,
+    "model": null,
+    "demo_repository": "repopilot/taskboard",
+    "version": "0.1.0"
+  },
+  "samples": [
+    {
+      "repository": "repopilot/taskboard",
+      "mode": "demo",
+      "issue": {
+        "number": 241,
+        "title": "Tasks are duplicated after reconnecting to the board",
+        "body": "When my connection drops and comes back, tasks I added offline appear twice.\n\nSteps to reproduce:\n1. Open a board with at least one task.\n2. Disconnect from the network.\n3. Add a task called ‘Review release notes’.\n4. Reconnect.\n\nExpected: one new task.\nActual: two tasks with different IDs.\n\nI can reproduce this in Chrome 128 on Windows 11. It started after updating to v0.8.2. I have not checked other browsers.",
+        "state": "open",
+        "labels": [
+          "bug",
+          "needs-triage"
+        ],
+        "author": "alex-dev",
+        "created_at": "2026-09-28T10:20:00Z",
+        "updated_at": "2026-10-01T09:15:00Z",
+        "comments": 4,
+        "html_url": "https://github.com/repopilot/taskboard/issues/241",
+        "body_truncated": false
+      },
+      "analysis": {
+        "summary": "Tasks created offline are reported to appear twice after reconnecting in v0.8.2. The reporter supplied reproduction steps and a Chrome/Windows environment.",
+        "category": "bug",
+        "priority": "high",
+        "rationale": "The report describes duplicate persisted task records during a core workflow. That makes data integrity worth investigating promptly, although the cause has not been confirmed.",
+        "suggested_labels": [
+          "bug",
+          "offline-sync",
+          "needs-investigation"
+        ],
+        "missing_info": [
+          "Do both tasks remain after refreshing the board?",
+          "Network request logs from the reconnect, with tokens removed.",
+          "Whether v0.8.1 reproduces the same behavior."
+        ],
+        "next_steps": [
+          "Reproduce the supplied steps on v0.8.2 with a clean board.",
+          "Check whether the offline queue replays the same create operation twice.",
+          "Compare task IDs and request IDs to distinguish duplicate writes from duplicate rendering.",
+          "Add a regression test for reconnecting after an offline task creation once the cause is confirmed."
+        ],
+        "draft_reply": "Thanks for the detailed steps. Duplicate records after reconnecting could affect board data, so this is worth investigating promptly. Do both copies remain after refreshing? If possible, please share the reconnect network requests with any tokens removed, and let us know whether you can reproduce this on v0.8.1. We have not confirmed the cause yet."
+      },
+      "provider": "demo",
+      "model": null,
+      "cached": false
+    },
+    {
+      "repository": "repopilot/taskboard",
+      "mode": "demo",
+      "issue": {
+        "number": 238,
+        "title": "CSV export fails when a task title contains an emoji",
+        "body": "Exporting my board gives ‘Unable to export’ when a task title contains 🚀. Removing the emoji makes export work again.\n\nExpected: a CSV file with every task, including emoji characters.\nActual: an error toast and no download.\n\nBrowser: Firefox on Linux. I don't have the console output yet.",
+        "state": "open",
+        "labels": [
+          "bug"
+        ],
+        "author": "maya-codes",
+        "created_at": "2026-09-27T14:30:00Z",
+        "updated_at": "2026-09-30T15:40:00Z",
+        "comments": 2,
+        "html_url": "https://github.com/repopilot/taskboard/issues/238",
+        "body_truncated": false
+      },
+      "analysis": {
+        "summary": "A board's CSV export reportedly fails when a task title includes an emoji. Removing that character allows export to complete.",
+        "category": "bug",
+        "priority": "medium",
+        "rationale": "One export workflow is blocked, but the report does not describe task data loss. A workaround is available; broader impact is still unknown.",
+        "suggested_labels": [
+          "bug",
+          "export",
+          "unicode"
+        ],
+        "missing_info": [
+          "Application and Firefox versions.",
+          "Console error text from the failed export.",
+          "A small example board that reproduces the failure."
+        ],
+        "next_steps": [
+          "Try exporting one task with an emoji in its title.",
+          "Inspect the export error and the text-to-file encoding path.",
+          "Check accented characters and multi-line titles as separate cases."
+        ],
+        "draft_reply": "Thanks for narrowing this down to the emoji. Could you share your application and Firefox versions, plus the console error from a failed export? A small example board would also help us reproduce it. Please remove any private task content before sharing."
+      },
+      "provider": "demo",
+      "model": null,
+      "cached": false
+    },
+    {
+      "repository": "repopilot/taskboard",
+      "mode": "demo",
+      "issue": {
+        "number": 235,
+        "title": "Add a keyboard shortcut to create a task",
+        "body": "I'd like to press N to open the new-task dialog when viewing a board. It would make keyboard navigation faster.\n\nThe shortcut should not trigger while typing in a text field, and it should be listed in the keyboard help screen.",
+        "state": "open",
+        "labels": [
+          "enhancement"
+        ],
+        "author": "sam-builds",
+        "created_at": "2026-09-26T08:00:00Z",
+        "updated_at": "2026-09-29T08:00:00Z",
+        "comments": 1,
+        "html_url": "https://github.com/repopilot/taskboard/issues/235",
+        "body_truncated": false
+      },
+      "analysis": {
+        "summary": "The reporter requests an N shortcut for opening the new-task dialog, excluding focused text inputs and documenting it in keyboard help.",
+        "category": "feature",
+        "priority": "low",
+        "rationale": "This is a usability improvement with a clear request. The report does not describe blocked functionality.",
+        "suggested_labels": [
+          "enhancement",
+          "keyboard",
+          "accessibility"
+        ],
+        "missing_info": [],
+        "next_steps": [
+          "Check the existing shortcut map for conflicts.",
+          "Define behavior for inputs, text areas, and editable elements.",
+          "Add shortcut behavior and update the keyboard help screen if accepted."
+        ],
+        "draft_reply": "Thanks for the suggestion. The text-field exception and help-screen entry make the expected behavior clear. We'll need to check for conflicts with existing shortcuts before deciding whether to add N."
+      },
+      "provider": "demo",
+      "model": null,
+      "cached": false
+    },
+    {
+      "repository": "repopilot/taskboard",
+      "mode": "demo",
+      "issue": {
+        "number": 231,
+        "title": "How do I run Taskboard behind a reverse proxy?",
+        "body": "I'm self-hosting Taskboard behind nginx at /tasks. The main page loads, but API requests return 404. Is a subpath deployment supported?\n\nI can share my nginx config if needed. I'm running Docker on a Linux server.",
+        "state": "open",
+        "labels": [
+          "question"
+        ],
+        "author": "chris-ops",
+        "created_at": "2026-09-25T12:00:00Z",
+        "updated_at": "2026-09-28T11:00:00Z",
+        "comments": 3,
+        "html_url": "https://github.com/repopilot/taskboard/issues/231",
+        "body_truncated": false
+      },
+      "analysis": {
+        "summary": "A self-hosted instance loads under /tasks through nginx, but API requests return 404. The reporter asks whether subpath deployment is supported.",
+        "category": "question",
+        "priority": "medium",
+        "rationale": "The reporter's deployment cannot use API functionality. The report alone does not establish a product defect or supported deployment configuration.",
+        "suggested_labels": [
+          "question",
+          "self-hosting",
+          "reverse-proxy"
+        ],
+        "missing_info": [
+          "Application version and Docker image tag.",
+          "Relevant nginx location and proxy_pass configuration.",
+          "The exact request URL that returns 404, without credentials."
+        ],
+        "next_steps": [
+          "Check the project's documented support for a URL prefix.",
+          "Compare the failing API URL with the nginx route mapping.",
+          "Provide a configuration example only after confirming supported behavior."
+        ],
+        "draft_reply": "Could you share the image tag, the relevant nginx location/proxy_pass block, and an example failing API URL? Please remove credentials and private hostnames. That should help distinguish a proxy-routing issue from an unsupported URL prefix."
+      },
+      "provider": "demo",
+      "model": null,
+      "cached": false
+    },
+    {
+      "repository": "repopilot/taskboard",
+      "mode": "demo",
+      "issue": {
+        "number": 226,
+        "title": "Setup guide is missing the environment-file step",
+        "body": "Following the README quick start on a fresh checkout fails with ‘DATABASE_URL is required’. Copying .env.example to .env fixes it.\n\nCould we add that step before starting the app? The example file is already in the repo.",
+        "state": "open",
+        "labels": [
+          "documentation",
+          "good first issue"
+        ],
+        "author": "lee-docs",
+        "created_at": "2026-09-23T16:00:00Z",
+        "updated_at": "2026-09-27T16:00:00Z",
+        "comments": 0,
+        "html_url": "https://github.com/repopilot/taskboard/issues/226",
+        "body_truncated": false
+      },
+      "analysis": {
+        "summary": "The quick start reportedly omits copying .env.example to .env, causing a missing DATABASE_URL error on a fresh checkout.",
+        "category": "documentation",
+        "priority": "medium",
+        "rationale": "New users following the documented setup are blocked until they discover the missing step. The reporter provides a small proposed correction.",
+        "suggested_labels": [
+          "documentation",
+          "setup",
+          "good first issue"
+        ],
+        "missing_info": [],
+        "next_steps": [
+          "Follow the quick start from a fresh checkout to verify the missing step.",
+          "Add the environment-file command before startup, with Windows and Unix examples.",
+          "Check whether DATABASE_URL needs any additional explanation."
+        ],
+        "draft_reply": "Thanks for finding the missing setup step and testing a workaround. We'll verify the quick start from a fresh checkout, then add the environment-file step before starting the app if it is missing."
+      },
+      "provider": "demo",
+      "model": null,
+      "cached": false
+    },
+    {
+      "repository": "repopilot/taskboard",
+      "mode": "demo",
+      "issue": {
+        "number": 219,
+        "title": "Update the test dependencies for Python 3.13",
+        "body": "The Python 3.13 CI job fails while installing the current test dependencies. Please check compatible versions and update the development requirements.\n\nThe runtime application works on Python 3.12; this report concerns the test environment.",
+        "state": "closed",
+        "labels": [
+          "maintenance"
+        ],
+        "author": "robin-dev",
+        "created_at": "2026-09-20T09:00:00Z",
+        "updated_at": "2026-09-26T09:00:00Z",
+        "comments": 2,
+        "html_url": "https://github.com/repopilot/taskboard/issues/219",
+        "body_truncated": false
+      },
+      "analysis": {
+        "summary": "The report concerns test dependency installation failing in a Python 3.13 CI job. The issue is now closed; no resolution details are included in the supplied body.",
+        "category": "maintenance",
+        "priority": "low",
+        "rationale": "The issue is closed and describes a development-environment failure rather than reported application data loss. No resolution can be inferred from the body alone.",
+        "suggested_labels": [
+          "maintenance",
+          "dependencies",
+          "ci"
+        ],
+        "missing_info": [
+          "The original dependency installation error.",
+          "Which dependency versions resolved the closed issue."
+        ],
+        "next_steps": [
+          "Record the compatible test dependency versions if the fix is not documented.",
+          "Keep Python 3.13 in the CI matrix to catch regressions."
+        ],
+        "draft_reply": "This issue is closed, but the supplied report doesn't say which dependency versions resolved it. Recording the working versions would help future contributors troubleshoot the same environment."
+      },
+      "provider": "demo",
+      "model": null,
+      "cached": false
+    }
+  ]
+}

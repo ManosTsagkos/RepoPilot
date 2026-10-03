@@ -38,6 +38,8 @@ The Node test runner uses jsdom to exercise the real dashboard script against a 
 
 ## Continuous integration
 
+The public browser demo is generated from the dashboard and sample dataset. After changing either, run `python scripts/build_demo.py`. `python scripts/build_demo.py --check` detects stale committed demo files. Dashboard tests also boot the published HTML below a repository URL and exercise its fixture adapter and JSON export.
+
 CI installs Python dependencies from `uv.lock` and dashboard test dependencies from `package-lock.json`. The Python matrix covers 3.11, 3.12, 3.13, and 3.14 on Windows and Ubuntu. A separate Ubuntu job runs the JavaScript syntax and behavior checks. Action versions and the uv version are pinned so routine CI runs do not silently switch tooling.
 
 After changing Python dependencies, update `uv.lock` with `uv lock`. After changing dashboard test dependencies, update `package-lock.json` with npm. Commit dependency declarations and their lockfiles together, then run the full checks.

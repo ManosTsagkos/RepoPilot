@@ -1,0 +1,46 @@
+{
+  "repository": "repopilot/taskboard",
+  "mode": "demo",
+  "issue": {
+    "number": 241,
+    "title": "Tasks are duplicated after reconnecting to the board",
+    "body": "When my connection drops and comes back, tasks I added offline appear twice.\n\nSteps to reproduce:\n1. Open a board with at least one task.\n2. Disconnect from the network.\n3. Add a task called ‘Review release notes’.\n4. Reconnect.\n\nExpected: one new task.\nActual: two tasks with different IDs.\n\nI can reproduce this in Chrome 128 on Windows 11. It started after updating to v0.8.2. I have not checked other browsers.",
+    "state": "open",
+    "labels": [
+      "bug",
+      "needs-triage"
+    ],
+    "author": "alex-dev",
+    "created_at": "2026-09-28T10:20:00Z",
+    "updated_at": "2026-10-01T09:15:00Z",
+    "comments": 4,
+    "html_url": "https://github.com/repopilot/taskboard/issues/241",
+    "body_truncated": false
+  },
+  "analysis": {
+    "summary": "Tasks created offline are reported to appear twice after reconnecting in v0.8.2. The reporter supplied reproduction steps and a Chrome/Windows environment.",
+    "category": "bug",
+    "priority": "high",
+    "rationale": "The report describes duplicate persisted task records during a core workflow. That makes data integrity worth investigating promptly, although the cause has not been confirmed.",
+    "suggested_labels": [
+      "bug",
+      "offline-sync",
+      "needs-investigation"
+    ],
+    "missing_info": [
+      "Do both tasks remain after refreshing the board?",
+      "Network request logs from the reconnect, with tokens removed.",
+      "Whether v0.8.1 reproduces the same behavior."
+    ],
+    "next_steps": [
+      "Reproduce the supplied steps on v0.8.2 with a clean board.",
+      "Check whether the offline queue replays the same create operation twice.",
+      "Compare task IDs and request IDs to distinguish duplicate writes from duplicate rendering.",
+      "Add a regression test for reconnecting after an offline task creation once the cause is confirmed."
+    ],
+    "draft_reply": "Thanks for the detailed steps. Duplicate records after reconnecting could affect board data, so this is worth investigating promptly. Do both copies remain after refreshing? If possible, please share the reconnect network requests with any tokens removed, and let us know whether you can reproduce this on v0.8.1. We have not confirmed the cause yet."
+  },
+  "provider": "demo",
+  "model": null,
+  "cached": false
+}

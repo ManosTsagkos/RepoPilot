@@ -4,9 +4,36 @@
 
 An AI assistant for reviewing GitHub issues. RepoPilot turns an issue into a concise summary, a suggested category and priority, missing details, next steps, and a draft reply.
 
-The app runs locally with a Python backend and a small browser dashboard. It reads GitHub issues; it does not post comments, change labels, or edit repositories.
+Built with **Python · FastAPI · OpenAI Responses API · GitHub REST API · Pydantic · JavaScript**.
+
+**[Try the interactive demo →](https://manostsagkos.github.io/RepoPilot/)** · [60-second walkthrough](docs/demo-guide.md) · [Sample JSON output](docs/sample-analysis.json) · [Architecture](docs/architecture.md)
+
+The browser demo needs no installation, account, or API key. Select a sample issue, review its analysis, copy a draft reply, or export JSON. It uses fictional issues and pre-written analyses; live GitHub and LLM integration runs in the local Python app.
+
+The app reads GitHub issues; it does not post comments, change labels, or edit repositories.
 
 ![RepoPilot dashboard showing a sample issue analysis](docs/dashboard.jpg)
+
+<details>
+<summary>More screenshots: feature triage and mobile layout</summary>
+
+### Feature request
+
+![Feature request with suggested next steps and a draft reply](docs/feature-demo.jpg)
+
+### Mobile layout
+
+<img src="docs/mobile-demo.jpg" alt="RepoPilot interactive demo on a mobile screen" width="320">
+
+</details>
+
+## A quick look
+
+1. Open the [demo](https://manostsagkos.github.io/RepoPilot/). The first bug report already has an analysis.
+2. Select **Add a keyboard shortcut to create a task** and click **Analyze issue** to compare a feature request.
+3. Review the rationale and draft reply, then try **Copy draft** and **Export JSON**.
+
+The Python implementation includes separate API clients, schema validation, bounded caching, cancellation handling, and actionable upstream errors. [Development checks](docs/development.md) describe the automated API, dashboard, and distribution tests.
 
 ## What it does
 
@@ -46,7 +73,7 @@ source .venv/bin/activate
 Install and start the app from the repository directory:
 
 ```sh
-python -m pip install -e ".[dev]"
+python -m pip install -e .
 python -m repopilot
 ```
 
@@ -114,6 +141,8 @@ The analysis includes `summary`, `category`, `priority`, `rationale`, `suggested
 
 ## Development
 
+Install the development tools with `python -m pip install -e ".[dev]"`.
+
 If you use [uv](https://docs.astral.sh/uv/), `uv sync --locked --extra dev` installs the versions in `uv.lock`. Run the app with `uv run --locked repopilot`. The pip setup above remains supported.
 
 ```sh
@@ -142,9 +171,11 @@ The app binds to the local machine by default, accepts localhost hostnames, and 
 
 For a quick manual evaluation, check category and priority against your own judgment, verify that missing details are relevant, and make sure the draft reply does not invent facts. The [evaluation checklist](docs/evaluation.md) covers ordinary issues, missing context, prompt injection, and refusals. Demo output is fixed and should not be counted as model-quality evidence.
 
-## Publishing
+## Public demo
 
-See [the publishing guide](docs/publish.md) for creating the GitHub repository. Review the files and run the checks before your first push.
+GitHub Pages serves a static demo from `docs/`. It reuses the application dashboard and validated sample dataset. Rebuild it after changing the frontend or samples with `python scripts/build_demo.py`; CI checks for drift with `python scripts/build_demo.py --check`.
+
+The public demo has no backend, API credentials, live repository access, or paid model calls. See [the publishing guide](docs/publish.md) for details.
 
 ## License
 

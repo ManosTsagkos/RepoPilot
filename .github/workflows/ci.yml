@@ -35,6 +35,8 @@ jobs:
         run: uv run --locked --extra dev python -m ruff check .
       - name: Format
         run: uv run --locked --extra dev python -m ruff format --check .
+      - name: Check public demo matches the app
+        run: uv run --locked --extra dev python scripts/build_demo.py --check
 
   dashboard:
     runs-on: ubuntu-latest

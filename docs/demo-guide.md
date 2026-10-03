@@ -1,5 +1,25 @@
 # Demo walkthrough
 
+**[Open the interactive demo](https://manostsagkos.github.io/RepoPilot/)** — no installation or API keys needed.
+
+## In 60 seconds
+
+1. Start with **Tasks are duplicated after reconnecting to the board**. Expand **Original issue** to compare the report with its summary and priority rationale.
+2. Select **Add a keyboard shortcut to create a task**, then click **Analyze issue**. Compare the feature category and lower suggested priority.
+3. Inspect missing context and next steps. **Copy draft** copies the proposed reply; **Export JSON** downloads the selected result.
+4. Search for `CSV`, or load **All issues** to include the closed sample. Category and priority filters apply to analyzed issues.
+
+The public demo uses the same dashboard as the Python app. Its data stays in the browser and its analyses are pre-written examples. To fetch real GitHub issues and request new AI analyses, run the Python app locally.
+
+## Screenshots and output
+
+- [Dashboard overview](dashboard.jpg)
+- [Feature request analysis](feature-demo.jpg)
+- [Mobile layout](mobile-demo.jpg)
+- [Example exported analysis](sample-analysis.json)
+
+## Local demo
+
 This walkthrough uses offline samples. No API keys or network requests are required. The analyses in demo mode are pre-written examples, not newly generated model responses.
 
 1. Start the app with `python -m repopilot` and open `http://127.0.0.1:8000`.

@@ -1,4 +1,16 @@
-# Publish to GitHub
+# Publishing and the public demo
+
+The repository is available at [github.com/ManosTsagkos/RepoPilot](https://github.com/ManosTsagkos/RepoPilot). Its [interactive demo](https://manostsagkos.github.io/RepoPilot/) runs on GitHub Pages.
+
+## Updating the demo
+
+Run `python scripts/build_demo.py` from the repository root after changing the dashboard or sample data. Commit the generated files in `docs/` together with the source changes. CI verifies that they match with `python scripts/build_demo.py --check`.
+
+GitHub Pages publishes from **main /docs**. The `.nojekyll` file keeps the generated HTML, JavaScript, CSS, and JSON unchanged. The demo loads only its public sample data; it does not contain credentials or call GitHub/OpenAI APIs. Screenshots and the downloadable sample JSON are also in `docs/`.
+
+For a fork, update the demo links in the README, set the repository's About website to its Pages URL, and enable Pages from the main branch's `/docs` folder in repository settings.
+
+## Publishing another checkout
 
 Run these commands from the RepoPilot directory. They assume that you have Git installed and that `ManosTsagkos` is the GitHub account where you want to publish the project.
 

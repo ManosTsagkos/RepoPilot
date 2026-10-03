@@ -1,6 +1,9 @@
 include .gitignore .gitattributes LICENSE README.md pyproject.toml uv.lock
 include package.json package-lock.json
 recursive-include docs *.md *.jpg *.png
+recursive-include docs *.html *.json *.js *.css *.svg
+include docs/.nojekyll
+recursive-include scripts *.py
 recursive-include tests *.py *.js *.cjs
 recursive-include .github *.yml
 prune .git
