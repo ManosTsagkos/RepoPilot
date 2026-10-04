@@ -2,7 +2,7 @@
 
 [![Checks](https://github.com/ManosTsagkos/RepoPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/ManosTsagkos/RepoPilot/actions/workflows/ci.yml)
 
-An AI assistant for reviewing GitHub issues. RepoPilot turns an issue into a concise summary, a suggested category and priority, missing details, next steps, and a draft reply.
+An issue-review assistant for maintainers. RepoPilot turns a GitHub issue into a concise summary, a suggested category and priority, missing details, next steps, and a draft reply. Compare the suggestions with the original report, then decide what to do next.
 
 Built with **Python · FastAPI · OpenAI Responses API · GitHub REST API · Pydantic · JavaScript**.
 
@@ -33,7 +33,21 @@ The app reads GitHub issues; it does not post comments, change labels, or edit r
 2. Select **Add a keyboard shortcut to create a task** and click **Analyze issue** to compare a feature request.
 3. Review the rationale and draft reply, then try **Copy draft** and **Export JSON**.
 
-The Python implementation includes separate API clients, schema validation, bounded caching, cancellation handling, and actionable upstream errors. [Development checks](docs/development.md) describe the automated API, dashboard, and distribution tests.
+## Inside the Python implementation
+
+These entry points show the application behavior and the tests that verify it:
+
+| Engineering decision | Implementation | Evidence |
+| --- | --- | --- |
+| Validate model output before displaying it; reject refusals and malformed responses. | [LLM client](src/repopilot/llm.py) and [Pydantic models](src/repopilot/models.py) | [Structured output and failure tests](tests/test_llm_api.py) |
+| Avoid duplicate paid calls while keeping cached results available; release the lock after cancellation. | [Issue service](src/repopilot/service.py) | [Concurrency, cancellation, and cache tests](tests/test_service.py) |
+| Bound GitHub reads, exclude pull requests, and report useful upstream errors. | [GitHub client](src/repopilot/github.py) | [Pagination, retry, and invalid-response tests](tests/test_github_api.py) |
+| Keep credentials on the backend and validate local browser requests. | [FastAPI app](src/repopilot/main.py) | [API and browser safeguard tests](tests/test_demo_api.py) |
+| Verify the distributed app works outside its source checkout. | [Package configuration](pyproject.toml) | [Source archive, wheel installation, and demo smoke tests](tests/test_packaging.py) |
+
+[Development checks](docs/development.md) explain how to run the full Python and dashboard suites. [Architecture](docs/architecture.md) explains the request flow and tradeoffs.
+
+A personal portfolio project by [Emmanouil Tsagkos](https://github.com/ManosTsagkos), developed with AI coding assistance. The source, regression tests, and documented limits are included for review.
 
 ## What it does
 
