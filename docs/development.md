@@ -43,3 +43,5 @@ The public browser demo is generated from the dashboard and sample dataset. Afte
 CI installs Python dependencies from `uv.lock` and dashboard test dependencies from `package-lock.json`. The Python matrix covers 3.11, 3.12, 3.13, and 3.14 on Windows and Ubuntu. A separate Ubuntu job runs the JavaScript syntax and behavior checks. Action versions and the uv version are pinned so routine CI runs do not silently switch tooling.
 
 After changing Python dependencies, update `uv.lock` with `uv lock`. After changing dashboard test dependencies, update `package-lock.json` with npm. Commit dependency declarations and their lockfiles together, then run the full checks.
+
+Dependabot checks the Python lockfile, dashboard dependencies, and GitHub Actions every Monday. Minor and patch updates are grouped by ecosystem and can merge automatically after the required checks pass on an up-to-date branch; major upgrades remain separate for review. The `CI gate` check succeeds only when the complete Python matrix and dashboard checks pass, and is the stable check required by branch protection. The automation explicitly refreshes public checks and the demo after a merge.

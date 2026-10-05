@@ -3,6 +3,7 @@ name: Checks
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -53,3 +54,22 @@ jobs:
         run: npm run check
       - name: Test dashboard behavior
         run: npm test
+
+  gate:
+    name: CI gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    if: always()
+    needs: [python, dashboard]
+    steps:
+      - name: Require every validation job to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e '
+            const jobs = JSON.parse(process.env.RESULTS);
+            if (!Object.keys(jobs).length || Object.values(jobs).some(job => job.result !== "success")) {
+              console.error("All required validation jobs must succeed.", jobs);
+              process.exit(1);
+            }
+          '
