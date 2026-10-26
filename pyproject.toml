@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,15 +8,15 @@ version = "0.1.0"
 description = "A small AI assistant for triaging GitHub issues."
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.143.0,<1",
+    "fastapi>=0.161.1,<1",
     "uvicorn>=0.30,<1",
     "httpx>=0.27,<1",
-    "pydantic>=2.14.0,<3",
-    "pydantic-settings>=2.5,<3",
+    "pydantic>=2.14.1,<3",
+    "pydantic-settings>=2.16.1,<3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "ruff>=0.9,<1", "build>=1,<2", "setuptools>=75", "httpx2>=2,<3"]
+dev = ["pytest>=8,<10", "ruff>=0.17.2,<1", "build>=1,<2", "setuptools>=84.2.1", "httpx2>=2.16.0,<3"]
 
 [project.scripts]
 repopilot = "repopilot.__main__:main"
